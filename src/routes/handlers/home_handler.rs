@@ -10,7 +10,7 @@ pub async fn hello_name(name: web::Path<String>) -> impl Responder {
 
 #[get("/test")]
 pub async fn test(app_state: web::Data<AppState>) -> impl Responder {
-    let res = app_state
+    let _res = app_state
         .db
         .query_all(Statement::from_string(
             sea_orm::DatabaseBackend::Postgres,

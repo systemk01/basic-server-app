@@ -1,3 +1,4 @@
+use crate::utils::jwt::encode_jwt;
 use crate::utils::{api_response, app_state::AppState};
 use actix_web::{Responder, post, web};
 use sea_orm::ActiveModelTrait;
@@ -58,11 +59,17 @@ pub async fn login(
         .await
         .unwrap();
 
-    if let Some(user) = user {
-        return api_response::ApiResponse::new(
-            200,
-            format!("User {:?} logged in successfully", user.name),
-        );
+    if user.is_none() {
+        return api_response::ApiResponse::new(401, "Invalid email or password".to_string())
     }
-    api_response::ApiResponse::new(401, "Invalid email or password".to_string())
-}
+
+    let user_data = user.unwrap();
+    let token = encode_jwt(user_data.email, user_data.id).unwrap();
+
+    api_response::ApiResponse::new(
+            200,
+            format!("{{ 'token':'{}' }}", token),
+        )
+    }
+    
+

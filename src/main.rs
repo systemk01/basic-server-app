@@ -5,13 +5,18 @@ use utils::app_state::AppState;
 mod routes;
 mod utils;
 
+#[derive(Debug)]
+struct MainError {
+    message: String,
+}
+
 #[post("/echo")]
 async fn echo(req_body: String) -> impl Responder {
     HttpResponse::Ok().body(req_body)
 }
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), MainError> {
     if std::env::var_os("RUST_LOG").is_none() {
         unsafe {
             std::env::set_var("RUST_LOG", "actix_web=info");
@@ -25,8 +30,13 @@ async fn main() -> std::io::Result<()> {
     let database_url = utils::constants::Database_URL.clone();
     println!("listening on {}:{}", address, port);
 
-    let db: DatabaseConnection = Database::connect(database_url).await.unwrap();
-    Migrator::up(&db, None).await.unwrap();
+    let db: DatabaseConnection = Database::connect(database_url)
+    .await
+    .map_err(|err|MainError {message: err.to_string()})?;
+
+    Migrator::up(&db, None)
+    .await
+    .map_err(|err|MainError {message: err.to_string()})?;
 
     HttpServer::new(move || {
         App::new()
@@ -34,8 +44,11 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .configure(routes::home_routes::config)
             .configure(routes::auth_routes::config)
+            .configure(routes::user_routes::config)
     })
-    .bind((address, port))?
+    .bind((address, port))
+    .map_err(|err|MainError {message: err.to_string()})?
     .run()
     .await
+    .map_err(|err| MainError { message: err.to_string() })
 }

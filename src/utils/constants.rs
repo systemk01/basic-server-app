@@ -23,10 +23,10 @@ fn set_port() -> u16 {
 
 fn set_database_url() -> String {
     dotenv::dotenv().ok();
-    env::var("DATABASE_URL").unwrap()
+    env::var("DATABASE_URL").expect("Postgres DATABASE_URL for basic_server_db not set")
 }
 
 fn set_secret() -> String {
     dotenv::dotenv().ok();
-    env::var("SECRET").unwrap()
+    env::var("SECRET").unwrap_or("SECRET".to_string())
 }

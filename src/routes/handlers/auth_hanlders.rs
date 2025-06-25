@@ -1,6 +1,7 @@
+use crate::utils::api_response::ApiResponse;
 use crate::utils::jwt::encode_jwt;
 use crate::utils::{api_response, app_state::AppState};
-use actix_web::{Responder, post, web};
+use actix_web::{post, web};
 use sea_orm::ActiveModelTrait;
 use sea_orm::EntityTrait;
 use sea_orm::QueryFilter;
@@ -25,7 +26,7 @@ struct LoginModel {
 pub async fn register(
     app_state: web::Data<AppState>,
     register_json: web::Json<RegisterModel>,
-) -> impl Responder {
+) -> Result<ApiResponse,ApiResponse> {
     let user_model = entity::user::ActiveModel {
         name: Set(register_json.name.clone()),
         email: Set(register_json.email.clone()),
@@ -34,22 +35,22 @@ pub async fn register(
     }
     .insert(&app_state.db)
     .await
-    .unwrap();
+    .map_err(|err|ApiResponse::new(500, err.to_string()))?;
 
-    api_response::ApiResponse::new(
+    Ok(api_response::ApiResponse::new(
         200,
         format!("User {} registered successfully", user_model.id),
-    )
+    ))
 }
 
 #[post("/login")]
 pub async fn login(
     app_state: web::Data<AppState>,
     login_json: web::Json<LoginModel>,
-) -> impl Responder {
+) -> Result<ApiResponse, ApiResponse> {
     // Implement login logic here
 
-    let user = entity::user::Entity::find()
+    let user_data = entity::user::Entity::find()
         .filter(
             Condition::all()
                 .add(entity::user::Column::Email.eq(&login_json.email))
@@ -57,19 +58,11 @@ pub async fn login(
         )
         .one(&app_state.db)
         .await
-        .unwrap();
+        .map_err(|err|ApiResponse::new(500, err.to_string()))?
+        .ok_or(ApiResponse::new(401, "User not found".to_owned()))?;
 
-    if user.is_none() {
-        return api_response::ApiResponse::new(401, "Invalid email or password".to_string())
-    }
+    let token = encode_jwt(user_data.email, user_data.id)
+    .map_err(|err|ApiResponse::new(500, err.to_string()))?;
 
-    let user_data = user.unwrap();
-    let token = encode_jwt(user_data.email, user_data.id).unwrap();
-
-    api_response::ApiResponse::new(
-            200,
-            format!("{{ 'token':'{}' }}", token),
-        )
-    }
-    
-
+    Ok(api_response::ApiResponse::new(200, format!("{{ 'token':'{}' }}", token)))
+}

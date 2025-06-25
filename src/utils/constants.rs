@@ -18,7 +18,7 @@ fn set_port() -> u16 {
     env::var("PORT")
         .unwrap_or_else(|_| "8080".to_string())
         .parse()
-        .unwrap_or(8080)
+        .expect("Can't parse PORT as u16")
 }
 
 fn set_database_url() -> String {

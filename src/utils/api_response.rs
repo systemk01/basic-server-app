@@ -1,6 +1,6 @@
-use std::fmt::{Display};
+use std::fmt::Display;
 
-use actix_web::{body::{BoxBody}, http::StatusCode, web, HttpResponse, Responder, ResponseError};
+use actix_web::{HttpResponse, Responder, ResponseError, body::BoxBody, http::StatusCode, web};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ApiResponse {
@@ -37,8 +37,7 @@ impl Responder for ApiResponse {
 
     fn respond_to(self, _: &actix_web::HttpRequest) -> actix_web::HttpResponse<Self::Body> {
         let body = BoxBody::new(web::BytesMut::from(self.body.as_bytes()));
-        HttpResponse::new(self.response_code)
-            .set_body(body)
+        HttpResponse::new(self.response_code).set_body(body)
     }
 }
 
@@ -46,7 +45,6 @@ impl Display for ApiResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Status Code: {}, Body: {}", self.status_code, self.body)
     }
-    
 }
 
 impl ResponseError for ApiResponse {
@@ -55,10 +53,7 @@ impl ResponseError for ApiResponse {
     }
 
     fn error_response(&self) -> HttpResponse<BoxBody> {
-        
         let body = BoxBody::new(web::BytesMut::from(self.body.as_bytes()));
-        HttpResponse::new(self.status_code())
-            .set_body(body)
+        HttpResponse::new(self.status_code()).set_body(body)
     }
-    
 }
